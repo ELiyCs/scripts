@@ -1,0 +1,27 @@
+SYSPOP= &&
+MYPOPPLER_MAJOR=$(pkg-config --modversion poppler | cut -d '.' -f1)
+if [ "$MYPOPPLER_MAJOR" = "0" ]; then
+    # if major was >=20, minor could start with 0 and not fit in octal
+    # causing error from 'let' in bash.
+    let MYPOPPLER_MINOR=$(pkg-config --modversion poppler | cut -d '.' -f2)
+else
+    # force a value > 85
+    let MYPOPPLER_MINOR=99
+fi
+if [ "$MYPOPPLER_MINOR" -lt 85 ]; then
+    # BLFS-9.1 uses 0.85.0, ignore earlier versions in this script.
+    # If updating texlive on an older system, review the available
+    # variants for pdftoepdf and pdftosrc to use system poppler.
+    SYSPOP=
+else
+    SYSPOP="--with-system-poppler --with-system-xpdf"
+    if [ "$MYPOPPLER_MINOR" -lt 86 ]; then
+        mv -v texk/web2c/pdftexdir/pdftoepdf{-poppler0.83.0,}.cc
+    else # 0.86.0 or later, including 20.08.0.
+        mv -v texk/web2c/pdftexdir/pdftoepdf{-poppler0.86.0,}.cc
+    fi
+    # For pdftosrc BLFS-9.1 uses 0.83.0 and that is the latest variant.
+    mv -v texk/web2c/pdftexdir/pdftosrc{-poppler0.83.0,}.cc
+fi &&
+export SYSPOP &&
+unset MYPOPPLER_{MAJOR,MINOR}
